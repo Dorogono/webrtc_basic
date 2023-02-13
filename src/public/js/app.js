@@ -7,9 +7,14 @@ socket.addEventListener("open", () => {
 });
 
 socket.addEventListener("message", (message) => {
-  console.log("GOT MESSAGE FROM SERVER : ", message.data);
+  console.log("GOT MESSAGE: ", message.data);
 });
 
 socket.addEventListener("close", () => {
+  // 서버가 꺼지면 실행
   console.log("🚫 Disconnected to Server");
 });
+
+setTimeout(() => {
+  socket.send("this msg is from browser");
+}, 10000);

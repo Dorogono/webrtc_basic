@@ -22,6 +22,11 @@ const wss = new WebSocket.Server({ server });
 wss.on("connection", (socket) => {
   // 연결된 브라우저 socket
   console.log("✅ Connected to Browser");
+  // 브라우저가 꺼지면 실행
+  socket.on("close", () => console.log("🚫 Disconnected from the Browser"));
+  socket.on("message", (message) =>
+    console.log(`From browser msg: ${message}`)
+  );
   socket.send("hello");
 });
 
