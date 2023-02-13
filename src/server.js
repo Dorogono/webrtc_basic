@@ -19,15 +19,26 @@ const server = http.createServer(app);
 // wss = web socket server
 const wss = new WebSocket.Server({ server });
 
+const sockets = [];
+
 wss.on("connection", (socket) => {
+  sockets.push(socket);
+  socket["nickname"] = "Anonymous";
   // 연결된 브라우저 socket
   console.log("✅ Connected to Browser");
+  socket.on("message", (msg) => {
+    const message = JSON.parse(msg);
+    switch (message.type) {
+      case "msg":
+        sockets.forEach((aSocket) => {
+          aSocket.send(`${socket.nickname}: ${message.data.toString()}`);
+        });
+      case "nickname":
+        socket["nickname"] = message.data;
+    }
+  });
   // 브라우저가 꺼지면 실행
   socket.on("close", () => console.log("🚫 Disconnected from the Browser"));
-  socket.on("message", (message) =>
-    console.log(`From browser msg: ${message}`)
-  );
-  socket.send("hello");
 });
 
 server.listen(3000, handleListen);
