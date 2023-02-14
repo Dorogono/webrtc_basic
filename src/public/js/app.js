@@ -2,23 +2,67 @@
 const socket = io();
 
 const welcome = document.getElementById("welcome");
-const form = welcome.querySelector("form");
+const form = welcome.querySelector("#roomName");
+const nameForm = welcome.querySelector("#name");
+const room = document.getElementById("room");
+
+room.hidden = true;
+
+let roomName;
+
+const addMsg = (msg) => {
+  const ul = room.querySelector("ul");
+  const li = document.createElement("li");
+  li.innerText = msg;
+  ul.appendChild(li);
+};
+
+const handleMsgSubmit = (e) => {
+  e.preventDefault();
+  const input = room.querySelector("#msg input");
+  const value = input.value;
+  socket.emit("new_msg", value, roomName, () => {
+    addMsg(`You: ${value}`);
+  });
+  input.value = "";
+};
+
+const handleNicknameSubmit = (e) => {
+  e.preventDefault();
+  const input = welcome.querySelector("#name input");
+  socket.emit("nickname", input.value);
+};
+
+const showRoom = () => {
+  welcome.hidden = true;
+  room.hidden = false;
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room: ${roomName}`;
+  const msgForm = room.querySelector("#msg");
+
+  msgForm.addEventListener("submit", handleMsgSubmit);
+};
 
 const handleRoomSubmit = (e) => {
   e.preventDefault();
   const input = form.querySelector("input");
 
   // Custom Event : 인자는 JSON Objet, Call back fn 가능
-  socket.emit(
-    "enter_room",
-    { payload: input.value },
-    { data: "두 번째 데이터" },
-    () => {
-      console.log("SERVER is Done");
-    }
-  );
-
+  // 단, call back fn은 마지막 값임 (서버 -> 클라이언트로 다 됐다고 알림)
+  socket.emit("enter_room", input.value, showRoom);
+  roomName = input.value;
   input.value = "";
 };
 
 form.addEventListener("submit", handleRoomSubmit);
+nameForm.addEventListener("submit", handleNicknameSubmit);
+
+socket.on("welcome", (user) => {
+  addMsg(`${user} Joined!`);
+});
+
+socket.on("new_msg", addMsg);
+
+socket.on("bye", (user) => {
+  addMsg(`${user} says Good Bye`);
+});

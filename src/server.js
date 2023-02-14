@@ -18,11 +18,32 @@ const server = http.createServer(app);
 const io = SocketIO(server);
 
 io.on("connection", (socket) => {
-  socket.on("enter_room", (msg, data, done) => {
-    console.log(msg, data);
-    setTimeout(() => {
-      done();
-    }, 3000);
+  socket["nickname"] = "Anonymous";
+  // 모든 socket Event 감지
+  socket.onAny((event) => {
+    console.log(`Socket Event: ${event}`);
+  });
+
+  socket.on("enter_room", (roomName, done) => {
+    // 유저는 자기 ID로 된 방에 이미 들어가 있음
+    // 특정 방으로 들어가기
+    socket.join(roomName);
+    done();
+    // 본인 제외 나머지 사람들에게 보냄
+    socket.to(roomName).emit("welcome", socket.nickname);
+  });
+
+  socket.on("new_msg", (msg, roomName, done) => {
+    socket.to(roomName).emit("new_msg", `${socket.nickname}: ${msg}`);
+    done();
+  });
+
+  socket.on("nickname", (nickname) => (socket["nickname"] = nickname));
+
+  socket.on("disconnecting", () => {
+    socket.rooms.forEach((room) => {
+      socket.to(room).emit("bye", socket.nickname);
+    });
   });
 });
 
