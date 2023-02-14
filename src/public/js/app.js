@@ -34,7 +34,7 @@ const handleNicknameSubmit = (e) => {
 };
 
 const showRoom = () => {
-  welcome.hidden = true;
+  // welcome.hidden = true;
   room.hidden = false;
   const h3 = room.querySelector("h3");
   h3.innerText = `Room: ${roomName}`;
@@ -57,12 +57,30 @@ const handleRoomSubmit = (e) => {
 form.addEventListener("submit", handleRoomSubmit);
 nameForm.addEventListener("submit", handleNicknameSubmit);
 
-socket.on("welcome", (user) => {
+socket.on("welcome", (user, newCount) => {
+  console.log(newCount);
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room ${roomName} (${newCount})`;
   addMsg(`${user} Joined!`);
 });
 
 socket.on("new_msg", addMsg);
 
-socket.on("bye", (user) => {
+socket.on("room_change", (rooms) => {
+  const roomList = welcome.querySelector("ul");
+  roomList.innerHTML = "";
+  if (rooms.length === 0) {
+    return;
+  }
+  rooms.forEach((room) => {
+    const li = document.createElement("li");
+    li.innerText = room;
+    roomList.append(li);
+  });
+});
+
+socket.on("bye", (user, newCount) => {
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room ${roomName} (${newCount})`;
   addMsg(`${user} says Good Bye`);
 });

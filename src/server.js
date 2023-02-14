@@ -1,6 +1,7 @@
 import http from "http";
 import express from "express";
-import SocketIO from "socket.io";
+import { Server } from "socket.io";
+import { instrument } from "@socket.io/admin-ui";
 
 const app = express();
 
@@ -15,7 +16,36 @@ app.get("/*", (req, res) => res.redirect("/"));
 const handleListen = () => console.log(`SERVER IS ON: http://localhost:3000`);
 
 const server = http.createServer(app);
-const io = SocketIO(server);
+const io = new Server(server, {
+  cors: {
+    origin: ["https://admin.socket.io"],
+    Credential: true,
+  },
+});
+
+instrument(io, {
+  auth: false,
+});
+
+const publicRooms = () => {
+  const {
+    sockets: {
+      adapter: { sids, rooms },
+    },
+  } = io;
+  const publicRooms = [];
+
+  rooms.forEach((_, key) => {
+    if (sids.get(key) === undefined) {
+      publicRooms.push(key);
+    }
+  });
+  return publicRooms;
+};
+
+const countRoom = (roomName) => {
+  return io.sockets.adapter.rooms.get(roomName)?.size;
+};
 
 io.on("connection", (socket) => {
   socket["nickname"] = "Anonymous";
@@ -30,7 +60,8 @@ io.on("connection", (socket) => {
     socket.join(roomName);
     done();
     // 본인 제외 나머지 사람들에게 보냄
-    socket.to(roomName).emit("welcome", socket.nickname);
+    socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+    io.sockets.emit("room_change", publicRooms());
   });
 
   socket.on("new_msg", (msg, roomName, done) => {
@@ -42,8 +73,11 @@ io.on("connection", (socket) => {
 
   socket.on("disconnecting", () => {
     socket.rooms.forEach((room) => {
-      socket.to(room).emit("bye", socket.nickname);
+      socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1);
     });
+  });
+  socket.on("disconnect", () => {
+    io.sockets.emit("room_change", publicRooms());
   });
 });
 
